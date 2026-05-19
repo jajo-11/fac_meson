@@ -2,7 +2,7 @@ project(
     'fac',
     'c',
     'fortran',
-    version: run_command('python3', 'make_version.py', check: true).stdout().strip(),
+    version: run_command('make_version.py', check: true).stdout().strip(),
 )
 
 blas_dep = subproject('mblas').get_variable('mblas_dep')

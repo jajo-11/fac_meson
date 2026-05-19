@@ -1,6 +1,6 @@
 # Flexible Atomic Code
 
-[![travis](https://travis-ci.org/flexible-atomic-code/fac.svg?branch=master)](https://travis-ci.org/flexible-atomic-code/fac)
+# *NOTE* this is an experimental fork of FAC that uses meson instead of make in the hopes of improving the installation experience of pfac
 
 A software packge for the calculation of various atomic processes.
 
@@ -159,5 +159,3 @@ For bugs and suggestions, please report to
 # Contact
 
 mingfenggu2003@gmail.com
-
-

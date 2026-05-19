@@ -79,3 +79,6 @@ doc/*/*.log
 
 # manual (it should be pushed in release-pdf branch by circle-ci)
 doc/manual.pdf
+
+.venv/
+builddir/

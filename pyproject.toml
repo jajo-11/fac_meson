@@ -1,0 +1,10 @@
+[build-system]
+build-backend = 'mesonpy'
+requires = ['meson-python']
+
+[project]
+name = 'pfac'
+description = 'Python bindings for the Flexible Atomic Code'
+readme = 'README.md'
+license = {file = 'LICENSE'}
+dynamic = ['version']

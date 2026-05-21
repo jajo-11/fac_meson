@@ -29,7 +29,7 @@ sfac/spol
 python/mpy
 
 # configure-generated
-sysdef.h
+#sysdef.h
 config.log
 config.status
 autom4te.cache/

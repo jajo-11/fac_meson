@@ -8,3 +8,4 @@ description = 'Python bindings for the Flexible Atomic Code'
 readme = 'README.md'
 license = {file = 'LICENSE'}
 dynamic = ['version']
+dependencies = ['matplotlib']

@@ -73,6 +73,7 @@ executable(
 )
 
 py = import('python').find_installation(pure: false)
+py_embed_dep = py.dependency(embed: true)
 
 py.install_sources(
   [
@@ -89,11 +90,14 @@ py.install_sources(
   subdir: 'pfac',
 )
 
-py.extension_module(
-  'pfac',
+# mpy is a standalone interpreter (like upstream FAC) linked against the
+# fac library; it must be an executable installed in bindir, not a Python
+# extension module.
+executable(
+  'mpy',
   'pfac/mpy.c',
   install: true,
-  dependencies: project_dependencies,
+  dependencies: [project_dependencies, py_embed_dep],
 )
 py.extension_module(
   'fac',

@@ -18,46 +18,29 @@
 
 /* Minimal main program -- everything is loaded from the library */
 
-#include <Python.h>
-#include "exports.h"
-#include "modsupport.h"
 #include "sysdef.h"
+#include <Python.h>
 
 #if USE_MPI == 1
 #include <mpi.h>
 #endif
 
-static struct PyModuleDef sfac_module = {
-    PyModuleDef_HEAD_INIT,
-    "pfac",
-    "python bindings for fac",
-    -1,
-    NULL,
-};
+int main(int argc, char *argv[]) {
+#if USE_MPI == 1
+  int rc;
 
-PyMODINIT_FUNC PyInit_pfac(void) {
-    return PyModule_Create(&sfac_module);
+  rc = MPI_Init(&argc, &argv);
+  if (rc != MPI_SUCCESS) {
+    fprintf(stderr, "MPI Initialization failed: error code %d\n", rc);
+    abort();
+  }
+#endif /* USE_MPI */
+
+  Py_BytesMain(argc, argv);
+
+#if USE_MPI == 1
+  MPI_Finalize();
+#endif
+
+  return 0;
 }
-
-PyAPI_FUNC(int) Py_Main(int argc, wchar_t **argv);
-
-// int main(int argc, char *argv[]) {
-// #if USE_MPI == 1
-//   int rc;
-
-//   rc = MPI_Init(&argc, &argv);
-//   if (rc != MPI_SUCCESS) {
-//     fprintf(stderr, "MPI Initialization failed: error code %d\n",
-// 	    rc);
-//     abort();
-//   }
-// #endif /* USE_MPI */
-
-//   Py_Main(argc, argv);
-
-// #if USE_MPI == 1
-//   MPI_Finalize();
-// #endif
-
-//   return 0;
-// }

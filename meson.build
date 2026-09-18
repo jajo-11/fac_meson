@@ -3,6 +3,7 @@ project(
   'c',
   'fortran',
   version: run_command(find_program('python3', 'python'), files('make_version.py'), check: true).stdout().strip(),
+  meson_version: '>= 0.64.0',
 )
 
 blas_dep = subproject('mblas').get_variable('mblas_dep')
@@ -70,6 +71,8 @@ executable(
 py = import('python').find_installation(pure: false)
 py_embed_dep = py.dependency(embed: true)
 
+pfac_install_dir = py.get_install_dir(pure: false) / 'pfac'
+
 fac_version_conf = configuration_data()
 fac_version_conf.set('FAC_VERSION', meson.project_version())
 configure_file(
@@ -77,7 +80,7 @@ configure_file(
   output: 'version.py',
   configuration: fac_version_conf,
   install: true,
-  install_dir: py.get_install_dir() / 'pfac',
+  install_dir: pfac_install_dir,
 )
 
 custom_target(
@@ -86,7 +89,7 @@ custom_target(
   command: [py, files('make_consts.py')],
   capture: true,
   install: true,
-  install_dir: py.get_install_dir() / 'pfac',
+  install_dir: pfac_install_dir,
 )
 
 py.install_sources(
@@ -101,6 +104,7 @@ py.install_sources(
     'pfac/table.py',
   ],
   subdir: 'pfac',
+  pure: false,
 )
 
 # mpy is a standalone interpreter (like upstream FAC) linked against the
@@ -117,26 +121,26 @@ py.extension_module(
   'pfac/fac.c',
   install: true,
   dependencies: project_dependencies,
-  install_dir: py.get_install_dir() / 'pfac',
+  install_dir: pfac_install_dir,
 )
 py.extension_module(
   'crm',
   'pfac/pcrm.c',
   install: true,
   dependencies: project_dependencies,
-  install_dir: py.get_install_dir() / 'pfac',
+  install_dir: pfac_install_dir,
 )
 py.extension_module(
   'pol',
   'pfac/ppol.c',
   install: true,
   dependencies: project_dependencies,
-  install_dir: py.get_install_dir() / 'pfac',
+  install_dir: pfac_install_dir,
 )
 py.extension_module(
   'util',
   'pfac/util.c',
   install: true,
   dependencies: project_dependencies,
-  install_dir: py.get_install_dir() / 'pfac',
+  install_dir: pfac_install_dir,
 )

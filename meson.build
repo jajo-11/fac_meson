@@ -2,7 +2,7 @@ project(
   'fac',
   'c',
   'fortran',
-  version: run_command('make_version.py', check: true).stdout().strip(),
+  version: run_command(find_program('python3', 'python'), files('make_version.py'), check: true).stdout().strip(),
 )
 
 blas_dep = subproject('mblas').get_variable('mblas_dep')
@@ -16,11 +16,6 @@ ode_dep = subproject('ode').get_variable('ode_dep')
 quadpack_dep = subproject('quadpack').get_variable('quadpack_dep')
 toms_dep = subproject('toms').get_variable('toms_dep')
 faclib_dep = subproject('faclib').get_variable('faclib_dep')
-
-project_source_files = [
-  'sfac/sfac.c',
-  'sfac/stoken.c',
-]
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required: false)
@@ -75,6 +70,16 @@ executable(
 py = import('python').find_installation(pure: false)
 py_embed_dep = py.dependency(embed: true)
 
+fac_version_conf = configuration_data()
+fac_version_conf.set('FAC_VERSION', meson.project_version())
+configure_file(
+  input: 'pfac/version.py.in',
+  output: 'version.py',
+  configuration: fac_version_conf,
+  install: true,
+  install_dir: py.get_install_dir() / 'pfac',
+)
+
 py.install_sources(
   [
     'pfac/__init__.py',
@@ -82,7 +87,6 @@ py.install_sources(
     'pfac/atom.py',
     'pfac/config.py',
     'pfac/const.py',
-    'pfac/version.py',
     'pfac/rfac.py',
     'pfac/spm.py',
     'pfac/table.py',

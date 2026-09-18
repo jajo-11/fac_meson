@@ -1,6 +1,6 @@
 #!/bin/sh
-# Fails the commit if the tracked source-tree fallback pfac/version.py is
-# missing or out of sync with the VERSION macros in consts.h.
+# Fails the commit if the tracked source-tree fallbacks pfac/version.py or
+# pfac/consts.py are missing or out of sync with the macros in consts.h.
 # Bypass with `git commit --no-verify` if the mismatch is deliberate.
 
 if command -v python3 >/dev/null 2>&1; then
@@ -11,5 +11,9 @@ fi
 
 "$PY" "$(git rev-parse --show-toplevel)/make_version.py" --check || {
     echo "pre-commit: pfac/version.py is missing or out of sync with consts.h." >&2
+    exit 1
+}
+"$PY" "$(git rev-parse --show-toplevel)/make_consts.py" "$(git rev-parse --show-toplevel)/subprojects/faclib/consts.h" --check || {
+    echo "pre-commit: pfac/consts.py is missing or out of sync with consts.h." >&2
     exit 1
 }

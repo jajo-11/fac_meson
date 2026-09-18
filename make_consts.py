@@ -2,9 +2,9 @@
 """Generate pfac/consts.py from subprojects/faclib/consts.h.
 
 Usage:
-  make_consts.py consts.h           print the generated module to stdout
-  make_consts.py consts.h --write   write the tracked source-tree fallback
-  make_consts.py consts.h --check   exit non-zero if the tracked fallback is
+  make_consts.py           print the generated module to stdout
+  make_consts.py --write   write the tracked source-tree fallback
+  make_consts.py --check   exit non-zero if the tracked fallback is
                                     missing or out of sync
 """
 
@@ -37,17 +37,14 @@ def main(argv):
     write = "--write" in argv
     check = "--check" in argv
 
-    paths = [a for a in argv if not a.startswith("--")]
-    if not paths:
-        raise SystemExit("Path to consts.h is not given")
+    consts_h = Path(__file__).resolve().parent / "subprojects" / "faclib" / "consts.h"
+    fallback_path = Path(__file__).resolve().parent / "pfac" / "consts.py"
 
     content = (
         HEADER
-        + "\n".join(f"{name} = {value}" for name, value in parse_consts(paths[0]))
+        + "\n".join(f"{name} = {value}" for name, value in parse_consts(consts_h))
         + "\n"
     )
-
-    fallback_path = Path(__file__).resolve().parent / "pfac" / "consts.py"
 
     if check:
         if not fallback_path.exists():

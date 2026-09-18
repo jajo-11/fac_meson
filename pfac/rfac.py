@@ -21,7 +21,6 @@
 import numpy as np
 import pylab
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import struct
 from sys import version_info
 from pfac import fac
@@ -2283,7 +2282,7 @@ def strnum(s):
 def valid_nistlev(fn):
     with open(fn) as f:
         for i,line in enumerate(f):
-            line = line.replace('\,',' or ')
+            line = line.replace('\\,',' or ')
             yield line
             
 class MLEV:

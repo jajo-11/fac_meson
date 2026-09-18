@@ -13,7 +13,7 @@ fi
     echo "pre-commit: pfac/version.py is missing or out of sync with consts.h." >&2
     exit 1
 }
-"$PY" "$(git rev-parse --show-toplevel)/make_consts.py" "$(git rev-parse --show-toplevel)/subprojects/faclib/consts.h" --check || {
+"$PY" "$(git rev-parse --show-toplevel)/make_consts.py" --check || {
     echo "pre-commit: pfac/consts.py is missing or out of sync with consts.h." >&2
     exit 1
 }

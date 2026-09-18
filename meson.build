@@ -80,15 +80,10 @@ configure_file(
   install_dir: py.get_install_dir() / 'pfac',
 )
 
-# pfac/consts.py is generated from the faclib constants header, mirroring
-# upstream setup.py parse_consts(): every numeric #define in consts.h
-# becomes a Python constant. It is part of the documented FAC API
-# ('from pfac.consts import *') and of pfac.__all__.
 custom_target(
   'consts.py',
-  input: 'subprojects/faclib/consts.h',
   output: 'consts.py',
-  command: [py, files('make_consts.py'), '@INPUT@'],
+  command: [py, files('make_consts.py')],
   capture: true,
   install: true,
   install_dir: py.get_install_dir() / 'pfac',

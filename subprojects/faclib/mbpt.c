@@ -5313,7 +5313,7 @@ int StructureMBPT1(char *fn, char *fn0, char *fn1,
 	} else {
 	  sprintf(tfn, "%s", fn1);
 	}
-	f = fopen(tfn, "w");
+	f = fopen(tfn, "wb");
 	if (f == NULL) {
 	  MPrintf(-1, "cannot open file %s\n", fn1);
 	  FreeIdxAry(&ing, 2);
@@ -5970,7 +5970,7 @@ int StructureMBPT1(char *fn, char *fn0, char *fn1,
     }
     if (MyRankMPI() == 0) {
       sprintf(tfn, "%s.tr%s", fn1, mbpt_tid);
-      f = fopen(tfn, "w");
+      f = fopen(tfn, "wb");
     }
     CONFIG_PAIR *cfgpair0 = malloc(sizeof(CONFIG_PAIR)*nc*nc);
     int *ncpti = malloc(sizeof(int)*npr);
@@ -6411,7 +6411,7 @@ int StructureMBPT1(char *fn, char *fn0, char *fn1,
     }
   }
   if (mbpt_ccn[0] && n3 >= 0) {
-    FILE *fc = fopen(mbpt_ccn, "w");
+    FILE *fc = fopen(mbpt_ccn, "wb");
     if (fc == NULL) {
       printf("cannot open mbpt_ccn: %s\n", mbpt_ccn);
     } else {
@@ -7069,7 +7069,7 @@ int StructureReadMBPT(char *fn, char *fn2, int nf, char *fn1[],
   mbpt = malloc(sizeof(MBPT_HAM)*nf);
   f1 = malloc(sizeof(FILE *)*nf);
   for (m = 0; m < nf; m++) {
-    f1[m] = fopen(fn1[m], "r");
+    f1[m] = fopen(fn1[m], "rb");
     if (f1[m] == NULL) {
       printf("cannot open file %s\n", fn1[m]);
       return -1;
@@ -7475,7 +7475,7 @@ int StructureReadMBPT(char *fn, char *fn2, int nf, char *fn1[],
   if (mbpt_tr.nktr == 0) goto ERROR;
   for (m = 0; m < nf; m++) {
     sprintf(tfn1, "%s.tr%s", fn1[m], mbpt_tid);
-    f1[m] = fopen(tfn1, "r");
+    f1[m] = fopen(tfn1, "rb");
     if (f1[m] == NULL) {
       printf("no transition correction file %s\n", tfn1);
       goto ERROR;

@@ -846,7 +846,7 @@ int ReadHamilton(char *fn, int *ng0, int *ng, int **kg,
   FILE *f;
   HAMILTON *h;
 
-  f = fopen(fn, "r");
+  f = fopen(fn, "rb");
   if (f == NULL) {
     printf("cannot open file: %s\n", fn);
     return -1;
@@ -910,7 +910,7 @@ int WriteHamilton(char *fn, int ng0, int ng, int *kg, int ngp, int *kgp) {
   FILE *f;
   HAMILTON *h;
 
-  f = fopen(fn, "w");
+  f = fopen(fn, "wb");
   if (f == NULL) return -1;
   fwrite(&ng0, sizeof(int), 1, f);
   fwrite(&ng, sizeof(int), 1, f);

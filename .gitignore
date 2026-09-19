@@ -82,3 +82,8 @@ doc/manual.pdf
 
 .venv/
 builddir/
+
+# Python build artifacts
+dist/
+wheelhouse/
+.venv/

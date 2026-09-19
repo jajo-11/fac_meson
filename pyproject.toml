@@ -1,6 +1,7 @@
 [build-system]
-build-backend = 'mesonpy'
-requires = ['meson-python']
+build-backend = 'build_backend'
+backend-path = ['.']
+requires = ['meson-python', 'delvewheel; sys_platform == "win32"']
 
 [project]
 name = 'pfac'

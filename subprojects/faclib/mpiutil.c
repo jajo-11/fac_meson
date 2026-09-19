@@ -1,17 +1,17 @@
 /*
  *   FAC - Flexible Atomic Code
  *   Copyright (C) 2001-2015 Ming Feng Gu
- * 
+ *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or
  *   (at your option) any later version.
- * 
+ *
  *   This program is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *   GNU General Public License for more details.
- * 
+ *
  *   You should have received a copy of the GNU General Public License
  *   along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -24,6 +24,14 @@
 #include "radial.h"
 #include "excitation.h"
 #include "cf77.h"
+
+/* Keep assertions active in release builds: meson-python builds with
+   buildtype=release, which defines NDEBUG. The mode-length check in
+   BFileOpen below must not be compiled out, so assert.h is included
+   after #undef NDEBUG (assert.h is required to support re-inclusion;
+   each inclusion redefines assert from the current NDEBUG value). */
+#undef NDEBUG
+#include <assert.h>
 
 static int _procid = -1;
 static int _initialized = 0;
@@ -71,14 +79,14 @@ int SkipWMPI(int w) {
 #endif
   return r;
 }
-  
+
 int SkipMPI() {
   int r = 0;
 #if USE_MPI == 1
   if (mpi.nproc > 1) {
     if (mpi.wid%mpi.nproc != mpi.myrank) {
       r = 1;
-    } 
+    }
     mpi.wid++;
   }
   return r;
@@ -86,9 +94,9 @@ int SkipMPI() {
   if (mpi.nproc > 1) {
 #ifdef OMP_STAT
     double t0 = WallTime();
-#endif    
+#endif
     SetLockNT(_mpilock);
-    mpi.wid++;      
+    mpi.wid++;
     if (mpi.wid <= _cwid) r = 1;
     else _cwid = mpi.wid;
     ReleaseLock(_mpilock);
@@ -109,7 +117,7 @@ void MPISeqBeg() {
     int myrank;
     int k;
     MPI_Status s;
-    
+
     myrank = MPIRank(NULL);
     if (myrank > 0) {
       k = -1;
@@ -127,7 +135,7 @@ void MPISeqEnd() {
   if (MPIReady()) {
     int myrank;
     int nproc;
-    
+
     myrank = MPIRank(&nproc);
     if (myrank < nproc-1) {
       MPI_Send(&myrank, 1, MPI_INT, myrank+1, myrank, MPI_COMM_WORLD);
@@ -154,7 +162,7 @@ void MPrintf(int ir, char *format, ...) {
       vprintf(format, args);
       if (_plock) ReleaseLock(_plock);
     } else {
-      if (myrank == ir%nproc) {	
+      if (myrank == ir%nproc) {
 	if (ir >= nproc) {
 	  if (_plock) SetLockNT(_plock);
 	  printf("Rank=%02d, ", myrank);
@@ -203,7 +211,7 @@ void ResetWidMPI(void) {
     Abort(1);
   }
 #endif
-  _cwid = -1;  
+  _cwid = -1;
 #pragma omp parallel
   {
   mpi.wid = 0;
@@ -301,7 +309,7 @@ void InitializeMPI(int n, int m) {
   }
 #if USE_MPI == 2
   if (m == 0) {
-    CopyPotentialOMP(1);  
+    CopyPotentialOMP(1);
 #pragma omp parallel
     {
       AllocExcDWS();
@@ -356,7 +364,7 @@ void FinalizeMPI() {
 void Abort(int r) {
 #if USE_MPI == 1
   MPI_Abort(MPI_COMM_WORLD, r);
-#else  
+#else
   exit(r);
 #endif
 }
@@ -369,9 +377,22 @@ double WallTime() {
 #endif
 }
 
-BFILE *BFileOpen(char *fn, char *md, int nb) {  
-  BFILE *bf;  
-  bf = malloc(sizeof(BFILE));  
+BFILE *BFileOpen(char *fn, char *md, int nb) {
+  BFILE *bf;
+  /* Force binary mode: on Windows, text-mode translation (CRLF <-> LF,
+     Ctrl-Z as EOF) silently corrupts binary DB files.
+  */
+  char mdb[16] = {0};
+  size_t ml = strlen(md);
+  assert (ml < sizeof(mdb) - 2);
+
+  if (strchr(md, 'b') == NULL) {
+    memcpy(mdb, md, ml);
+    mdb[ml] = 'b';
+    mdb[ml + 1] = '\0';
+    md = mdb;
+  }
+  bf = malloc(sizeof(BFILE));
   bf->p = 0;
   bf->w = &bf->p;
   bf->n = 0;
@@ -458,7 +479,7 @@ int BFileClose(BFILE *bf) {
   } else {
     if (bf->mr == 0) {
       r = fclose(bf->f);
-    }  
+    }
     free(bf->buf);
   }
 #elif USE_MPI == 2
@@ -481,7 +502,7 @@ int BFileClose(BFILE *bf) {
   }
   r = fclose(bf->f);
 #endif
-  
+
   free(bf->fn);
   free(bf);
 
@@ -501,7 +522,7 @@ size_t BFileRead(void *ptr, size_t size, size_t nmemb, BFILE *bf) {
   }
   int nb = bf->n - bf->p;
   int n = nb/size;
-  int nr=0, nm=0, nn=0, nread;  
+  int nr=0, nm=0, nn=0, nread;
   nread = 0;
   while (nmemb) {
     if (n >= nmemb) {
@@ -519,9 +540,9 @@ size_t BFileRead(void *ptr, size_t size, size_t nmemb, BFILE *bf) {
       nread += n;
       nmemb -= n;
     }
-    if (bf->eof) break;    
+    if (bf->eof) break;
     if (nb > 0) {
-      memmove(bf->buf, bf->buf+bf->p, nb);    
+      memmove(bf->buf, bf->buf+bf->p, nb);
     }
     bf->p = 0;
     bf->n = nb;
@@ -600,12 +621,12 @@ void BFileRewind(BFILE *bf) {
 size_t BFileWrite(void *ptr, size_t size, size_t nmemb, BFILE *bf) {
   int n, m, k, mr;
   char *buf;
-  
+
   if (bf->buf == NULL) {
     n = fwrite(ptr, size, nmemb, bf->f);
     return n;
   }
-  
+
 #if USE_MPI == 2
   mr = MPIRank(NULL);
 #else
@@ -616,7 +637,7 @@ size_t BFileWrite(void *ptr, size_t size, size_t nmemb, BFILE *bf) {
   m = size*nmemb;
   k = bf->nbuf - bf->w[mr];
   n = 0;
-  
+
   if (m >= k) {
 #if USE_MPI == 2
     if (bf->nr > 1) SetLock(&bf->lock);
@@ -640,7 +661,7 @@ size_t BFileWrite(void *ptr, size_t size, size_t nmemb, BFILE *bf) {
 int BFileCheckBuf(BFILE *bf, int m) {
   int n, k, mr;
   char *buf;
-  
+
   if (bf->buf == NULL) {
     return 0;
   }
@@ -713,11 +734,19 @@ RANDIDX *RandList(int n) {
   RANDIDX *w;
   const long seed = 0xFFFF;
   w = (RANDIDX *) malloc(sizeof(RANDIDX)*n);
+  #ifdef _WIN32
+  srand(seed);
+  for (i = 0; i < n; i++) {
+    w[i].r = rand() / (RAND_MAX + 1.0);
+    w[i].i = i;
+  }
+  #else
   srand48(seed);
   for (i = 0; i < n; i++) {
     w[i].r = drand48();
     w[i].i = i;
   }
+  #endif
   qsort(w, n, sizeof(RANDIDX), CompareRandIdx);
   return w;
 }
@@ -729,7 +758,7 @@ void RandIntList(int n, int *k) {
     w[i].i = k[w[i].i];
   }
   for (i = 0; i < n; i++) {
-    k[i] = w[i].i;    
+    k[i] = w[i].i;
   }
   free(w);
 }
@@ -860,7 +889,7 @@ double LDist(double *lnfac, int n, int k, int q, int md) {
       return _cxldist[k];
     } else {
       return 0.0;
-    }    
+    }
   default:
     if (md >= 100) {
       if (k == md-100) return 1.0;
@@ -932,7 +961,7 @@ double CoefRFD(int m, double f, double g) {
   f4 *= f4;
   double g4 = g1*g1;
   g4 *= g4;
-  
+
   double r = 0.0;
   double fj, gi;
   gi = 1.0;

@@ -1,17 +1,17 @@
 /*
  *   FAC - Flexible Atomic Code
  *   Copyright (C) 2001-2015 Ming Feng Gu
- * 
+ *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or
  *   (at your option) any later version.
- * 
+ *
  *   This program is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *   GNU General Public License for more details.
- * 
+ *
  *   You should have received a copy of the GNU General Public License
  *   along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -22,14 +22,14 @@
 
 static char *rcsid="$Id: array.c,v 1.17 2005/07/20 19:43:19 mfgu Exp $";
 #if __GNUC__ == 2
-#define USE(var) static void * use_##var = (&use_##var, (void *) &var) 
+#define USE(var) static void * use_##var = (&use_##var, (void *) &var)
 USE (rcsid);
 #endif
 
 /*************************************************************
   Implementation of module "array"
-  
-  This module implements a variable length one- and 
+
+  This module implements a variable length one- and
   multi-dimensional array.
 
   Author: M. F. Gu, mfgu@stanford.edu
@@ -88,11 +88,11 @@ void RemoveMultiLocks(void) {
     }
   }
 }
-      
+
 void InitIntData(void *p, int n) {
   int *d;
   int i;
-  
+
   d = (int *) p;
   for (i = 0; i < n; i++) {
     d[i] = 0;
@@ -102,7 +102,7 @@ void InitIntData(void *p, int n) {
 void InitDoubleData(void *p, int n) {
   double *d;
   int i;
-  
+
   d = (double *) p;
   for (i = 0; i < n; i++) {
     d[i] = 0;
@@ -130,7 +130,7 @@ void InitArrayData(void *p, int n) {
   }
 }
 
-/* 
+/*
 ** FUNCTION:    ArrayInit
 ** PURPOSE:     initialize the one-dimensional array.
 ** INPUT:       {ARRAY *a},
@@ -141,8 +141,8 @@ void InitArrayData(void *p, int n) {
 **              number of elements in one block.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
-** NOTE:        
+** SIDE EFFECT:
+** NOTE:
 */
 int ArrayInit(ARRAY *a, int esize, int block) {
   a->id[0] = '\0';
@@ -159,7 +159,7 @@ int ArrayInit(ARRAY *a, int esize, int block) {
     a->lock = NULL;
     Abort(1);
   }
-#else  
+#else
   a->lock = NULL;
 #endif
   return 0;
@@ -174,7 +174,7 @@ int ArrayInitID(ARRAY *a, int esize, int block, char *id) {
   return 0;
 }
 
-/* 
+/*
 ** FUNCTION:    ArrayGet
 ** PURPOSE:     retrieve the i-th element of the array.
 ** INPUT:       {ARRAY *a},
@@ -182,14 +182,14 @@ int ArrayInitID(ARRAY *a, int esize, int block, char *id) {
 **              {int i},
 **              index of the element.
 ** RETURN:      {void *},
-**              pointer to the element. 
+**              pointer to the element.
 **              NULL, if does not exist.
-** SIDE EFFECT: 
-** NOTE:        
+** SIDE EFFECT:
+** NOTE:
 */
 void *ArrayGet(ARRAY *a, int i) {
   DATA *p;
-  
+
   if (i < 0 || i >= a->dim) return NULL;
   p = a->data;
   while (i >= a->block) {
@@ -203,7 +203,7 @@ void *ArrayGet(ARRAY *a, int i) {
     }
 }
 
-/* 
+/*
 ** FUNCTION:    ArraySet
 ** PURPOSE:     set the i-th element.
 ** INPUT:       {ARRAY *a},
@@ -217,17 +217,17 @@ void *ArrayGet(ARRAY *a, int i) {
 **              when first created.
 ** RETURN:      {void *},
 **              pointer to the element.
-** SIDE EFFECT: 
+** SIDE EFFECT:
 ** NOTE:        if d == NULL, this function simply retrieve the
 **              i-th element. if the element does not exist,
 **              an empty one is created.
 */
-void *ArraySet(ARRAY *a, int i, void *d, 
+void *ArraySet(ARRAY *a, int i, void *d,
 	       void (*InitData)(void *, int)) {
   void *pt;
   char *ct;
   DATA *p;
- 
+
   if (a->dim == 0) {
     a->data = (DATA *) malloc(sizeof(DATA));
     a->data->dptr = malloc(a->bsize);
@@ -248,30 +248,30 @@ void *ArraySet(ARRAY *a, int i, void *d,
     p = p->next;
     i -= a->block;
   }
-  
+
   if (!(p->dptr)) {
     p->dptr = malloc(a->bsize);
     if (InitData) InitData(p->dptr, a->block);
   }
-  
+
   ct = (char *) p->dptr;
   for (; i > 0; i--) {
     ct += a->esize;
   }
   pt = (void *) ct;
-  
+
   if (d) memcpy(pt, d, a->esize);
   return pt;
 }
 
-/* 
+/*
 ** FUNCTION:    ArrayContiguous
 ** PURPOSE:     Return a 1-d standard c-array contiguous in memory.
 ** INPUT:       {ARRAY *a},
 **              pointer to the array.
 ** RETURN:      {void *},
 **              pointer to the resulting array.
-** SIDE EFFECT: 
+** SIDE EFFECT:
 */
 void *ArrayContiguous(ARRAY *a) {
   void *r, *rp;
@@ -295,11 +295,11 @@ void *ArrayContiguous(ARRAY *a) {
     }
     p = p->next;
   }
-  
+
   return r;
 }
-  
-/* 
+
+/*
 ** FUNCTION:    ArrayAppend
 ** PURPOSE:     append an element to the array
 ** INPUT:       {ARRAY *a},
@@ -308,17 +308,17 @@ void *ArrayContiguous(ARRAY *a) {
 **              data to be appened.
 ** RETURN:      {void *},
 **              pointer to the appended element.
-** SIDE EFFECT: 
-** NOTE:        
+** SIDE EFFECT:
+** NOTE:
 */
-void *ArrayAppend(ARRAY *a, void *d, 
+void *ArrayAppend(ARRAY *a, void *d,
 		  void (*InitData)(void *, int)) {
-  int i;  
+  int i;
   i = a->dim;
   return ArraySet(a, i, d, InitData);
 }
 
-/* 
+/*
 ** FUNCTION:    ArrayFreeData
 ** PURPOSE:     free the data stored in the array.
 ** INPUT:       {DATA *p},
@@ -331,10 +331,10 @@ void *ArrayAppend(ARRAY *a, void *d,
 **              a function called before freeing the data.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
+** SIDE EFFECT:
 ** NOTE:        this function calls itself recursively.
 */
-int ArrayFreeData(DATA *p, int esize, int block, 
+int ArrayFreeData(DATA *p, int esize, int block,
 		  void (*FreeElem)(void *)) {
   void *pt;
   int i;
@@ -345,7 +345,7 @@ int ArrayFreeData(DATA *p, int esize, int block,
     ArrayFreeData(p->next, esize, block, FreeElem);
     p->next = NULL;
   }
-    
+
   if (FreeElem && p->dptr) {
     pt = p->dptr;
     for (i = 0; i < block; i++) {
@@ -373,7 +373,7 @@ int ArrayFreeLock(ARRAY *a, void (*FreeElem)(void *)) {
   return 0;
 }
 
-/* 
+/*
 ** FUNCTION:    ArrayFree
 ** PURPOSE:     deinitialize the array.
 ** INPUT:       {ARRAY *a},
@@ -382,9 +382,9 @@ int ArrayFreeLock(ARRAY *a, void (*FreeElem)(void *)) {
 **              a function called before freeing each element.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
-** NOTE:        
-*/    
+** SIDE EFFECT:
+** NOTE:
+*/
 int ArrayFree(ARRAY *a, void (*FreeElem)(void *)) {
   if (!a) return 0;
   if (a->dim == 0) return 0;
@@ -394,7 +394,7 @@ int ArrayFree(ARRAY *a, void (*FreeElem)(void *)) {
   return 0;
 }
 
-/* 
+/*
 ** FUNCTION:    ArrayTrim
 ** PURPOSE:     Trim the tail of an array to a given length.
 ** INPUT:       {ARRAY *a},
@@ -405,9 +405,9 @@ int ArrayFree(ARRAY *a, void (*FreeElem)(void *)) {
 **              a function called before freeing each element.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
+** SIDE EFFECT:
 ** NOTE:        if the length of array is <= n, nothing happens.
-*/    
+*/
 int ArrayTrim(ARRAY *a, int n, void (*FreeElem)(void *)) {
   DATA *p;
   void *pt;
@@ -415,7 +415,7 @@ int ArrayTrim(ARRAY *a, int n, void (*FreeElem)(void *)) {
 
   if (!a) return 0;
   if (a->dim <= n) return 0;
-  
+
   if (n == 0) {
     ArrayFree(a, FreeElem);
     return 0;
@@ -448,9 +448,9 @@ int ArrayTrim(ARRAY *a, int n, void (*FreeElem)(void *)) {
   a->dim = n;
 
   return 0;
-}         
+}
 
-/* 
+/*
 ** FUNCTION:    SMultiInit
 ** PURPOSE:     initialize a multi-dimensional array.
 ** INPUT:       {MULTI *ma},
@@ -464,9 +464,9 @@ int ArrayTrim(ARRAY *a, int n, void (*FreeElem)(void *)) {
 **              giving the block size in each dimension.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
-** NOTE:        
-*/    
+** SIDE EFFECT:
+** NOTE:
+*/
 int SMultiInit(MULTI *ma, int esize, int ndim, int *block, char *id) {
   int i;
   if (id != NULL) {
@@ -487,48 +487,48 @@ int SMultiInit(MULTI *ma, int esize, int ndim, int *block, char *id) {
   return 0;
 }
 
-/* 
+/*
 ** FUNCTION:    SMultiGet
 ** PURPOSE:     get an element in a multi-dimensional array.
 ** INPUT:       {MULTI *ma},
 **              pointer to the multi-dimensional array.
 **              {int *k},
-**              integer array of length ndim, 
+**              integer array of length ndim,
 **              giving the indexes in each dimension.
 ** RETURN:      {void *},
 **              pointer to the element
-** SIDE EFFECT: 
-** NOTE:        
-*/    
+** SIDE EFFECT:
+** NOTE:
+*/
 void *SMultiGet(MULTI *ma, int *k, LOCK **lock) {
   ARRAY *a;
   int i;
-  
+
   a = ma->array;
   if (a == NULL) return NULL;
   for (i = 0; i < ma->ndim; i++) {
     a = (ARRAY *) ArrayGet(a, k[i]);
     if (a == NULL) return NULL;
   }
-  
+
   return (void *) a;
 }
 
-/* 
+/*
 ** FUNCTION:    SMultiSet
 ** PURPOSE:     Set an element in a multi-dimensional array.
 ** INPUT:       {MULTI *ma},
 **              pointer to the multi-dimensional array.
 **              {int *k},
-**              integer array of length ndim, 
+**              integer array of length ndim,
 **              giving the indexes in each dimension.
 **              {void *d},
 **              pointer to a piece of data to be copied to the array.
 ** RETURN:      {void *},
 **              pointer to the element just set.
-** SIDE EFFECT: 
+** SIDE EFFECT:
 ** NOTE:        if d == NULL, returns an uninitialized element.
-*/    
+*/
 void *SMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
 		void (*InitData)(void *, int),
 		void (*FreeElem)(void *)) {
@@ -557,12 +557,12 @@ void *SMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
       }
     }
   }
-  
+
   pt = ArraySet(a, k[i], d, InitData);
   return pt;
 }
 
-/* 
+/*
 ** FUNCTION:    SMultiFreeDataOnly
 ** PURPOSE:     Free the data of a multi-dimensional array.
 ** INPUT:       {ARRAY *a},
@@ -573,9 +573,9 @@ void *SMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
 **              a function called before freeing each element.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
-** NOTE:        
-*/    
+** SIDE EFFECT:
+** NOTE:
+*/
 int SMultiFreeDataOnly(ARRAY *a, int d, void (*FreeElem)(void *)) {
   int i, d1;
   ARRAY *b;
@@ -599,7 +599,7 @@ int SMultiFreeData(MULTI *ma, void (*FreeElem)(void *)) {
   return SMultiFreeDataOnly(ma->array, ma->ndim, FreeElem);
 }
 
-/* 
+/*
 ** FUNCTION:    SMultiFree
 ** PURPOSE:     Free multi-dimensional array.
 ** INPUT:       {MULTI *ma},
@@ -608,9 +608,9 @@ int SMultiFreeData(MULTI *ma, void (*FreeElem)(void *)) {
 **              a function called before freeing each element.
 ** RETURN:      {int},
 **              always 0.
-** SIDE EFFECT: 
-** NOTE:        
-*/    
+** SIDE EFFECT:
+** NOTE:
+*/
 int SMultiFree(MULTI *ma, void (*FreeElem)(void *)) {
   if (ma->ndim <= 0) return 0;
   SMultiFreeData(ma, FreeElem);
@@ -633,7 +633,7 @@ typedef struct _MDATA_ {
 void InitMDataData(void *p, int n) {
   MDATA *d;
   int i;
-  
+
   d = (MDATA *) p;
   for (i = 0; i < n; i++) {
     d[i].index = NULL;
@@ -677,17 +677,17 @@ void InitMDataData(void *p, int n) {
   b -= c; b -= a; b ^= (a<<10); \
   c -= a; c -= b; c ^= (b>>15); \
 }
-  
+
 static inline int Hash2a(int *id, ub4 length, ub4 initval, int n, int m) {
   ub4 a, b, c, len, i, *k, kd[32];
 
   k = kd;
   for (i = 0; i < length; i++) k[i] = id[i];
-  
+
   len = length;
   a = b = 0x9e3779b9;  /* the golden ratio; an arbitrary value */
   c = initval;           /* the previous hash value */
-  
+
   /*---------------------------------------- handle most of the key */
   while (len >= 3) {
     a += k[0];
@@ -712,10 +712,10 @@ static inline int Hash2a(int *id, ub4 length, ub4 initval, int n, int m) {
 
 inline int Hash2(int *k, ub4 length, ub4 initval, int n, int m) {
   ub4 a,b,c;
-  
+
   /* Set up the internal state */
   a = b = c = 0xdeadbeef + (((ub4)length)<<2) + initval;
-  
+
   /*------------------------------------------------- handle most of the key */
   while (length > 3) {
     a += k[0];
@@ -725,10 +725,10 @@ inline int Hash2(int *k, ub4 length, ub4 initval, int n, int m) {
     length -= 3;
     k += 3;
   }
-  
+
   /*------------------------------------------- handle the last 3 uint32_t's */
   switch(length)                     /* all the case statements fall through */
-    { 
+    {
     case 3 : c+=k[2];
     case 2 : b+=k[1];
     case 1 : a+=k[0];
@@ -823,7 +823,7 @@ int NMultiInit(MULTI *ma, int esize, int ndim, int *block, char *id) {
   ma->clean_lock = NULL;
 #endif
   if (_multistats != NULL && ma->id[0]) {
-    ArrayAppend(_multistats, &ma, InitPointerData);    
+    ArrayAppend(_multistats, &ma, InitPointerData);
   }
   ma->iset = 0;
   return 0;
@@ -854,7 +854,7 @@ void *NMultiGet(MULTI *ma, int *k, LOCK **lock) {
     }
     p = p->next;
   }
-  
+
   return NULL;
 }
 
@@ -896,7 +896,7 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
     }
   }
 #pragma omp atomic
-  ma->iset += myrank;  
+  ma->iset += myrank;
 #pragma omp flush
   if (clocked) {
     ReleaseLock(ma->clean_lock);
@@ -945,7 +945,7 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
 	  if (lock) *lock = pt->lock;
 	  if (locked) {
 	    ReleaseLock(a->lock);
-	  }	  
+	  }
 	  return pt->data;
 	}
 	pt++;
@@ -962,7 +962,7 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
 	  break;
 	}
       }
-    }  
+    }
     if (!locked && a->lock) {
       SetLock(a->lock);
       locked = 1;
@@ -999,9 +999,9 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
 	    break;
 	  }
 	}
-      }  
+      }
     }
-    if (m == a->block) {	
+    if (m == a->block) {
       size = sizeof(DATA);
       p0->next = (DATA *) malloc(size);
       p = p0->next;
@@ -1025,7 +1025,7 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
 #else
   pt->lock = NULL;
 #endif
-  
+
   pt->data = malloc(ma->esize);
   size += ma->esize + ma->isize;
 #pragma omp atomic
@@ -1035,7 +1035,7 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
   _totalsize += size;
   if (InitData) InitData(pt->data, 1);
   if (d) memcpy(pt->data, d, ma->esize);
-  if (lock) *lock = pt->lock;  
+  if (lock) *lock = pt->lock;
   int *idx = (int *) malloc(ma->isize);
   memcpy(idx, k, ma->isize);
   pt->index = idx;
@@ -1049,11 +1049,11 @@ void *NMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
   return pt->data;
 }
 
-static int NMultiArrayFreeData(DATA *p, int esize, int block, 
-			       void (*FreeElem)(void *)) { 
+static int NMultiArrayFreeData(DATA *p, int esize, int block,
+			       void (*FreeElem)(void *)) {
   MDATA *pt;
   int i;
-  
+
   if (p->next) {
     NMultiArrayFreeData(p->next, esize, block, FreeElem);
   }
@@ -1119,7 +1119,7 @@ int NMultiFreeData(MULTI *ma, void (*FreeElem)(void *)) {
     if (clean) {
       MPrintf(-1,
 	      "clean0 %s t=%g o=%g m=%g tt=%g to=%g tm=%g c=%d ch=%g\n",
-	      ma->id, ma->totalsize, ma->overheadsize, ma->maxsize,	    
+	      ma->id, ma->totalsize, ma->overheadsize, ma->maxsize,
 	      _totalsize, _overheadsize, _maxsize, ma->clean_flag, ma->cth);
     }
   } else if (ma->clean_mode == 1) {
@@ -1232,7 +1232,7 @@ int MMultiInit(MULTI *ma, int esize, int ndim, int *block, char *id) {
       ma->iblock[i] = block[i];
     }
   }
-  
+
   n = HashSize(ma->ndim);
   ma->hsize = n;
   ma->ia = (ARRAY *) malloc(sizeof(ARRAY)*n);
@@ -1260,7 +1260,7 @@ void MMultiIndex(MULTI *ma, int *k) {
       ma->sidx[i] = 0;
       ma->ridx[i] = (unsigned short) k[i];
     }
-  }  
+  }
   ma->aidx = ma->ridx[0];
   for (i = 1; i < ma->ndim; i++) {
     ma->aidx += ma->ridx[i]*ma->iblock[i-1];
@@ -1272,7 +1272,7 @@ void *MMultiGet(MULTI *ma, int *k, LOCK **lock) {
   ARRAY *a, *da;
   char *pt;
   DATA *p;
-  
+
   MMultiIndex(ma, k);
   if (ma->isf) {
     return ArrayGet(ma->array, ma->aidx);
@@ -1287,7 +1287,7 @@ void *MMultiGet(MULTI *ma, int *k, LOCK **lock) {
   while (p) {
     pt = (char *) p->dptr;
     for (m = 0; m < a->block && j < i; j++, m++) {
-      if (bcmp(pt, ma->sidx, ma->isize) == 0) {
+      if (memcmp(pt, ma->sidx, ma->isize) == 0) {
 	h = ma->aidx + j*ma->iblock[ma->ndim1];
 	return ArrayGet(da, h);
       }
@@ -1310,7 +1310,7 @@ void *MMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
   if (ma->isf) {
     return ArraySet(ma->array, ma->aidx, d, InitData);
   }
-  
+
   h = Hash2(ma->iidx, ma->ndim, 0, ma->ndim, ma->hmask);
   a = &(ma->ia[h]);
   da = &(ma->da[h]);
@@ -1330,10 +1330,10 @@ void *MMultiSet(MULTI *ma, int *k, void *d, LOCK **lock,
     while (p) {
       pt = (char *) p->dptr;
       for (m = 0; m < a->block && j < i; j++, m++) {
-	if (bcmp(pt, ma->sidx, ma->isize) == 0) {
+	if (memcmp(pt, ma->sidx, ma->isize) == 0) {
 	  h = ma->aidx + j*ma->iblock[ma->ndim1];
 	  return ArraySet(da, h, d, InitData);
-	}      
+	}
 	pt += ma->isize;
       }
       p0 = p;
@@ -1364,7 +1364,7 @@ int MMultiFreeData(MULTI *ma, void (*FreeElem)(void *)) {
   int i;
   if (!ma) return 0;
   if (ma->ndim == 0) return 0;
-  
+
   a = ma->array;
   ArrayFreeData(a->data, a->esize, a->block, FreeElem);
   a->dim = 0;
@@ -1386,7 +1386,7 @@ int MMultiFree(MULTI *ma, void (*FreeElem)(void *)) {
   if (!ma) return 0;
   if (ma->ndim <= 0) return 0;
   MMultiFreeData(ma, FreeElem);
-  free(ma->array);  
+  free(ma->array);
   ma->array = NULL;
   free(ma->ia);
   ma->ia = NULL;
@@ -1437,7 +1437,7 @@ int IdxGet(IDXARY *ia, int d) {
   if (d > ia->m1) return -2;
   return ia->i[d - ia->m0];
 }
-  
+
 void FreeIdxAry(IDXARY *ia, int md) {
   if (ia == NULL) return;
   if (md == 0) {
@@ -1456,7 +1456,7 @@ void FreeIdxAry(IDXARY *ia, int md) {
     if (ia->m > 0) free(ia->i);
     ia->m = 0;
     return;
-  }  
+  }
 }
 int Bisect(void *p0, int n, int m, void *p,
 	   int (*comp)(const void *, const void *)) {
@@ -1472,15 +1472,15 @@ int Bisect(void *p0, int n, int m, void *p,
     else if (k < 0) i1 = i;
     else i0 = i;
   }
-  
+
   k = comp(p0, p);
   if (k == 0) return i0;
   k = comp(p0, p+(n-1)*m);
   if (k == 0) return i1;
-  
+
   return -1;
 }
-  
+
 int IBisect(int b, int n, int *a) {
   int i, i0, i1;
 
@@ -1493,7 +1493,7 @@ int IBisect(int b, int n, int *a) {
     else if (b < a[i]) i1 = i;
     else i0 = i;
   }
-  
+
   if (b == a[i0]) return i0;
   else if (b == a[i1]) return i1;
   else return -1;

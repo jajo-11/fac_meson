@@ -1080,7 +1080,7 @@ int SavePotential(char *fn) {
 
   if (MyRankMPI() != 0) return 0;
   
-  f = fopen(fn, "w");
+  f = fopen(fn, "wb");
   if (f == NULL) {
     MPrintf(0, "cannot open potential file: %s\n", fn);
     return -1;

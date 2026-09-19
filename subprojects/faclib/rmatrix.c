@@ -251,7 +251,7 @@ void ReadRMatrixBasis(char *fn, RBASIS *rbs, int fmt) {
   FILE *f;
   int i, j, k, n, kappa, m, nr;
 
-  f = fopen(fn, "r");
+  f = fopen(fn, "rb");
   if (fmt == 0) {
     nr = fread(&(rbs->ib0), sizeof(int), 1, f);
     nr = fread(&(rbs->rb0), sizeof(double), 1, f);
@@ -364,7 +364,7 @@ void WriteRMatrixBasis(char *fn, int fmt) {
   int i, n, k, ka, nr;
   ORBITAL *orb;
 
-  f = fopen(fn, "w");
+  f = fopen(fn, "wb");
   if (f == NULL) return;
 
   if (fmt == 0) {
@@ -1388,7 +1388,7 @@ int RMatrixSurface(char *fn) {
   HAMILTON *h, **hs;
   FILE *f;
 
-  f = fopen(fn, "w");
+  f = fopen(fn, "wb");
   if (f == NULL) return -1;
   WriteRMatrixSurface(f, NULL, NULL, 0, fmode, NULL, NULL);
   nchan = nts*rbasis.nkappa;

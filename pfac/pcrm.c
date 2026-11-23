@@ -1798,13 +1798,28 @@ static PyObject *PRateCoefficients(PyObject *self, PyObject *args) {
 }
 
 static PyObject *PGauntFF(PyObject *self, PyObject *args) {
-  double g2, u;
+  double z, t, de, msg, ne, r, z2, g2, u;
   int m;
 
-  m = 5;
-  if (!PyArg_ParseTuple(args, "dd|i", &g2, &u, &m)) return NULL;
-
-  return Py_BuildValue("d", GauntFF(g2, u, m));
+  z = -1.0;
+  m = 0;
+  msg = 0.0;
+  ne = 0.0;
+  if (!PyArg_ParseTuple(args, "dd|iddd", &t, &de, &m, &z, &msg, &ne)) return NULL;
+  if (m < 10) {
+    if (z >= 0) {
+      z2 = z*z;
+      g2 = z2*RYDBERG_EV/t;
+      u = de/t;
+    } else {
+      g2 = t;
+      u = de;
+    }
+    r = GauntTFF(g2, u, m);
+  } else {
+    r = GauntIFF(z*z*RYDBERG_EV, t, de, msg, ne, m-10);
+  }
+  return Py_BuildValue("d", r);
 }
 
 static struct PyMethodDef crm_methods[] = {

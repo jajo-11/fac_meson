@@ -17,7 +17,49 @@ polariz/,    use of pfac.pol module to calculate the polarizations of
 	     He-like Fe lines.
 rmatrix/,    collisional excitation with the Dirac R-matrix method.
 
-
-These scripts are also used to check the healty state of the code.
+These scripts are also used to check the healthy state of the code.
 `ref` in each example contains the reference results by FAC=1.1.4.
-In order to test FAC in your environment, execute `make check`.
+
+Testing
+=======
+
+`check.py` is the single entry point for running the demos and for
+comparing their output against `ref/`. It needs pfac to be importable
+(e.g. `pip install .`, or after `meson install` with the install prefix on
+PYTHONPATH).
+
+    python check.py
+
+runs every demo that has reference data and then checks it, stopping at
+the first failure. Useful variations:
+
+    python check.py -l                 list demos, scripts and results
+    python check.py -c                 only compare existing output vs ref/
+    python check.py structure NeL      restrict to a couple of demos
+    python check.py -j8                run up to 8 demos at once
+    python check.py --openmp           run with OpenMP (run only, see below)
+    python check.py -C                 remove generated demo output
+    python check.py -R tests           re-baseline demo/tests/ref
+    python check.py -k                 keep going after a failing demo
+    python check.py -v                 show each script and file checked
+
+`FeL` and `rmatrix` produce no reference data and are slow, so they are
+not part of the default set: name them explicitly, or pass `--all`.
+
+OpenMP runs group levels into blocks in a different order and with different
+`IBLK`/`FBLK` group labels than serial runs, so their output cannot be
+compared against the serial data in `ref/`. `--openmp` therefore only runs the
+demos; `-c` still compares if you ask for it explicitly.
+
+Note that `-R` copies the freshly written files verbatim, so the `TSess`
+line at the top of every result (the session timestamp) changes too. Keep
+the `ref/` diff limited to the numbers you actually meant to update.
+
+Adding a demo
+=============
+
+Add an entry to the `DEMOS` table at the bottom of `check.py` listing its
+`scripts` (run in order, with the demo directory as cwd), the `results`
+that are compared against `ref/` and refreshed by `-R`, and the `outputs`
+that `-C` deletes. Files that are produced but have no comparator can be
+listed under `unchecked` so `-l` mentions them.

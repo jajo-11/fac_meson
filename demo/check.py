@@ -1,16 +1,48 @@
+"""Run the FAC demo scripts and compare their output against reference data.
+
+Usage examples::
+
+    python check.py                    # run every fast demo, then check it
+    python check.py -c                 # only compare existing output vs ref/
+    python check.py -l                 # list demos, scripts and results
+    python check.py structure NeL      # restrict to a couple of demos
+    python check.py -R tests           # re-baseline demo/tests/ref
+    python check.py -C                 # remove generated demo output
+    python check.py -j8 --openmp       # parallel OpenMP run (no comparison)
+
+Passing two file names keeps the historical single-file behaviour::
+
+    python check.py ne.lev ref/ne.lev
+"""
+
+import argparse
+import shutil
+import subprocess
 import sys
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import numpy as np
 
 from pfac.rfac import *
 
+DEMO_DIR = Path(__file__).resolve().parent
+
 
 def _check_header(actual, expected):
     if "E0" in actual:
-        assert np.allclose(actual["E0"], expected["E0"], rtol=0.01)
+        if not np.allclose(actual["E0"], expected["E0"], rtol=0.01):
+            raise ValueError(
+                "header E0 mismatch: {} vs {}".format(actual["E0"], expected["E0"])
+            )
     if "NBlocks" in actual:
-        assert actual["NBlocks"] == expected["NBlocks"]
+        if actual["NBlocks"] != expected["NBlocks"]:
+            raise ValueError(
+                "header NBlocks mismatch: {} vs {}".format(
+                    actual["NBlocks"], expected["NBlocks"]
+                )
+            )
 
 
 def _check_block(actual_blocks, expected_blocks, atols={}, rtols={}):
@@ -39,9 +71,19 @@ def _check_block(actual_blocks, expected_blocks, atols={}, rtols={}):
             message += " {} vs {}".format(actual, expected)
         raise ValueError(message)
 
+    if len(actual_blocks) != len(expected_blocks):
+        raise ValueError(
+            "number of blocks differs: {} vs {}".format(
+                len(actual_blocks), len(expected_blocks)
+            )
+        )
+
     for i, (actual_bl, expected_bl) in enumerate(zip(actual_blocks, expected_blocks)):
         for key in actual_bl:
-            assert key in expected_bl
+            if key not in expected_bl:
+                raise ValueError(
+                    "block {}: key {} is missing from the reference".format(i, key)
+                )
             actual = actual_bl[key]
             expected = expected_bl[key]
 
@@ -75,7 +117,11 @@ def _check_block(actual_blocks, expected_blocks, atols={}, rtols={}):
                     _raise(i, key, actual, expected)
             else:
                 if not actual == expected:
-                    pass
+                    raise ValueError(
+                        "block {} key {} differs: {} vs {}".format(
+                            i, key, actual, expected
+                        )
+                    )
 
 
 def _sort_array(arrays, ref_arrays, *keys):
@@ -350,10 +396,428 @@ def check(actual_file, expected_file):
         raise TypeError("Unknown file extension: {}".format(actual_file))
 
 
-if __name__ == "__main__":
-    args = sys.argv
-    if len(args) != 3:
-        raise ValueError("Usage: python check.py file1 file2")
+# ---------------------------------------------------------------------------
+# demo registry
+#
+#   scripts  : the example scripts to run, in order, with cwd = the demo dir
+#   results  : files compared against ref/, and re-baselined by --update-ref
+#   outputs   : everything generated, removed by --clean
+#   slow      : only run when the demo is named explicitly or --all is given
+#   unchecked : generated files that have no checker (documented, not compared)
+# ---------------------------------------------------------------------------
 
-    print(args[1])
-    check(args[1], args[2])
+DEMOS = OrderedDict(
+    [
+        (
+            "structure",
+            dict(
+                scripts=["fe17_structure.py"],
+                results=["ne.lev", "ne.tr"],
+                outputs=["ne.pot", "ne.lev.b", "ne.lev", "ne.tr.b", "ne.tr"],
+                openmp=True,
+            ),
+        ),
+        (
+            "excitation",
+            dict(
+                scripts=["fe17_excitation.py", "fe17_excitationM.py"],
+                results=["ne.lev", "ne.ce", "ne.ceM"],
+                outputs=[
+                    "ne.lev.b",
+                    "ne.lev",
+                    "ne.ce.b",
+                    "ne.ce",
+                    "ne.ceM.b",
+                    "ne.ceM",
+                ],
+                openmp=True,
+            ),
+        ),
+        (
+            "pirr",
+            dict(
+                scripts=["fe24_pirr.py"],
+                results=["li.lev", "li.rr"],
+                outputs=["li.lev.b", "li.lev", "li.rr.b", "li.rr"],
+            ),
+        ),
+        (
+            "aidr",
+            dict(
+                scripts=["se_ai.py"],
+                results=["se.lev", "se.ai"],
+                outputs=["se.lev.b", "se.lev", "se.ai.b", "se.ai"],
+            ),
+        ),
+        (
+            "ionization",
+            dict(
+                scripts=["fe17_ionization.py"],
+                results=["ne_f.lev", "ne.ci"],
+                outputs=["ne_f.lev.b", "ne_f.lev", "ne.ci.b", "ne.ci"],
+                openmp=True,
+            ),
+        ),
+        (
+            "polariz",
+            dict(
+                scripts=["data.py", "pol.py"],
+                results=["ta.en", "ta.tr", "ta.ce"],
+                outputs=[
+                    "ta.en",
+                    "ta.tr",
+                    "ta.ce",
+                    "tb.en",
+                    "tb.tr",
+                    "tb.ce",
+                    "pol.txt",
+                    "pop.txt",
+                ],
+                unchecked=["pol.txt", "pop.txt"],
+            ),
+        ),
+        (
+            "NeL",
+            dict(
+                scripts=["ne.py", "spec.py"],
+                results=[
+                    "Ne03a.en",
+                    "Ne03a.tr",
+                    "Ne03a.ce",
+                    "Ne03a.rt",
+                    "Ne03a.sp",
+                    "Ne03b.ham",
+                ],
+                outputs=["Ne03a.r0", "Ne03a.r1", "Ne03a.r3"]
+                + ["Ne03a.%s" % e for e in ("en", "tr", "ce", "rt", "sp")]
+                + ["Ne03b.%s" % e for e in ("en", "tr", "ce", "rt", "sp", "ham")],
+                openmp=True,
+            ),
+        ),
+        (
+            "tests",
+            dict(
+                scripts=["simple_crm.py", "diag_hamiltonian.py", "maxwell_rate.py"],
+                results=["diagh_O_a.en", "O.sp"],
+                outputs=[
+                    "diagh_O.en",
+                    "diagh_O_a.en",
+                    "O.b.sp",
+                    "O.sp",
+                    "Nea.en",
+                    "Neb.en",
+                    "Neb.tr",
+                    "Neb.ce",
+                    "Neb.cer",
+                    "Neb.ci",
+                    "Neb.cir",
+                    "Neb.ham",
+                ],
+                globs=["O_crm"],
+                openmp=True,
+            ),
+        ),
+        (
+            "FeL",
+            dict(
+                scripts=["fe.py", "spec.py"],
+                results=[],
+                outputs=[],
+                globs=["data", "Fe08", "Fe09", "Fe10"],
+                slow=True,
+            ),
+        ),
+        (
+            "rmatrix",
+            dict(
+                scripts=["rmx.py", "cs.py"],
+                results=[],
+                outputs=[],
+                globs=["rmx.b*", "rmx.d*", "r1.d*"],
+                slow=True,
+            ),
+        ),
+    ]
+)
+
+
+def default_demos():
+    """All demos that have reference data, i.e. the ones we can regress."""
+    return [n for n, d in DEMOS.items() if d.get("results") and not d.get("slow")]
+
+
+def demo_dir(name):
+    return DEMO_DIR / name
+
+
+def run_demo(name, openmp=False, verbose=False):
+    """Run a demo's scripts in order; raise RuntimeError on the first failure."""
+    info = DEMOS[name]
+    cwd = demo_dir(name)
+    for script in info["scripts"]:
+        cmd = [sys.executable, script]
+        # only some scripts understand the optional 'openmp' argument
+        if openmp and info.get("openmp"):
+            cmd.append("openmp")
+        if verbose:
+            print("  $ %s" % " ".join(cmd), flush=True)
+        proc = subprocess.run(cmd, cwd=str(cwd))
+        if proc.returncode != 0:
+            raise RuntimeError(
+                "%s/%s exited with status %d" % (name, script, proc.returncode)
+            )
+
+
+def check_demo(name, verbose=False):
+    """Compare a demo's results against ref/; return a list of problems."""
+    info = DEMOS[name]
+    cwd = demo_dir(name)
+    problems = []
+    for result in info["results"]:
+        actual = cwd / result
+        expected = cwd / "ref" / result
+        if verbose:
+            print("  %s vs ref/%s" % (result, result), flush=True)
+        if not actual.exists():
+            problems.append("%s: missing (run the demo first)" % actual.name)
+            continue
+        if not expected.exists():
+            problems.append("ref/%s: missing reference file" % result)
+            continue
+        try:
+            check(str(actual), str(expected))
+        except Exception as e:
+            problems.append("%s: %s" % (result, e))
+    return problems
+
+
+def update_ref(name, verbose=False):
+    """Copy a demo's current results into ref/, creating it if needed."""
+    info = DEMOS[name]
+    if not info["results"]:
+        return
+    refdir = demo_dir(name) / "ref"
+    refdir.mkdir(exist_ok=True)
+    for result in info["results"]:
+        src = demo_dir(name) / result
+        if not src.exists():
+            raise RuntimeError("%s: cannot re-baseline, file was not produced" % result)
+        if verbose:
+            print("  %s -> ref/%s" % (result, result), flush=True)
+        shutil.copyfile(src, refdir / result)
+
+
+def clean_demo(name, verbose=False):
+    """Remove generated output so the next run starts from scratch."""
+    info = DEMOS[name]
+    cwd = demo_dir(name)
+    paths = [cwd / o for o in info.get("outputs", [])]
+    for pattern in info.get("globs", []):
+        paths.extend(cwd.glob(pattern))
+    for path in paths:
+        if path.is_dir():
+            if verbose:
+                print("  rm -r %s" % path, flush=True)
+            shutil.rmtree(path)
+        elif path.exists():
+            if verbose:
+                print("  rm %s" % path, flush=True)
+            path.unlink()
+
+
+def list_demos():
+    print("%-12s %-8s %s" % ("demo", "refs", "scripts"))
+    for name, info in DEMOS.items():
+        missing = [s for s in info["scripts"] if not (demo_dir(name) / s).exists()]
+        note = ""
+        if not info["results"]:
+            note = "  (no reference data)"
+        elif info.get("slow"):
+            note = "  (slow, opt in by name)"
+        if missing:
+            note += "  MISSING: " + " ".join(missing)
+        print(
+            "%-12s %-8s %s%s"
+            % (name, len(info["results"]), " ".join(info["scripts"]), note)
+        )
+        if info.get("unchecked"):
+            print(
+                "%-12s %-8s produced but not compared: %s"
+                % ("", "", " ".join(info["unchecked"]))
+            )
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="check.py",
+        description="Run the FAC demos and compare their output with ref/.",
+        epilog="Two file arguments keep the old behaviour: check.py FILE REF.",
+    )
+    parser.add_argument(
+        "names",
+        nargs="*",
+        metavar="DEMO",
+        help="demos to act on (default: %s)" % " ".join(default_demos()),
+    )
+    parser.add_argument("-l", "--list", action="store_true", help="list demos")
+    parser.add_argument("-r", "--run", action="store_true", help="run the demo scripts")
+    parser.add_argument(
+        "-c", "--check", action="store_true", help="compare results with ref/"
+    )
+    parser.add_argument(
+        "-C", "--clean", action="store_true", help="remove generated output"
+    )
+    parser.add_argument(
+        "-R",
+        "--update-ref",
+        action="store_true",
+        help="re-baseline ref/ from a fresh run (implies --run)",
+    )
+    parser.add_argument(
+        "-k",
+        "--keep-going",
+        action="store_true",
+        help="continue after a failing demo instead of stopping",
+    )
+    parser.add_argument(
+        "-j",
+        "--jobs",
+        type=int,
+        default=1,
+        metavar="N",
+        help="run up to N demos at once (default: 1)",
+    )
+    parser.add_argument(
+        "--openmp",
+        action="store_true",
+        help="run the scripts that support it with OpenMP (implies --run)",
+    )
+    parser.add_argument(
+        "--all",
+        dest="all_demos",
+        action="store_true",
+        help="include slow demos and demos without reference data",
+    )
+    parser.add_argument("-v", "--verbose", action="store_true")
+    args = parser.parse_args(argv)
+
+    # historical single-file mode: check.py FILE REF
+    if len(args.names) == 2 and all(Path(n).is_file() for n in args.names):
+        print(args.names[0])
+        check(args.names[0], args.names[1])
+        return 0
+
+    if args.list:
+        list_demos()
+        return 0
+
+    # work out what to do; no action flags means run + check, except for
+    # --openmp where the serial ref/ data cannot be compared against
+    if not (args.run or args.check or args.clean or args.update_ref):
+        args.run = True
+        if args.openmp:
+            print(
+                "note: --openmp only runs the demos; ref/ holds serial output, so "
+                "pass -c explicitly if you want to compare anyway",
+                file=sys.stderr,
+            )
+        else:
+            args.check = True
+    if args.update_ref:
+        args.run, args.check = True, False
+
+    if args.names:
+        unknown = [n for n in args.names if n not in DEMOS]
+        if unknown:
+            parser.error("unknown demo(s): %s" % ", ".join(unknown))
+        names = list(args.names)
+    elif args.all_demos:
+        names = list(DEMOS)
+    else:
+        names = default_demos()
+
+    if args.jobs < 1:
+        parser.error("--jobs must be a positive integer")
+    if args.jobs > 1 and not args.keep_going:
+        print(
+            "note: --jobs implies --keep-going (each demo runs independently)",
+            file=sys.stderr,
+        )
+        args.keep_going = True
+
+    def process(name):
+        """clean/run/re-baseline/check one demo; returns a list of problems."""
+        print("==> %s" % name, flush=True)
+        problems = []
+        if args.clean:
+            try:
+                clean_demo(name, args.verbose)
+            except Exception as e:
+                problems.append("clean: %s" % e)
+        # a demo with no reference data cannot be re-baselined, so -R must not
+        # silently turn into a plain (possibly very slow) run
+        should_run = args.run and (not args.update_ref or DEMOS[name]["results"])
+        if should_run and not problems:
+            try:
+                run_demo(name, args.openmp, args.verbose)
+            except Exception as e:
+                problems.append(str(e))
+        if args.update_ref and not problems:
+            try:
+                update_ref(name, args.verbose)
+            except Exception as e:
+                problems.append("update-ref: %s" % e)
+        if args.check and not problems:
+            problems.extend(check_demo(name, args.verbose))
+        return name, problems
+
+    results = {}
+    if args.jobs > 1 and len(names) > 1:
+        with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+            for name, problems in pool.map(process, names):
+                results[name] = problems
+    else:
+        for name in names:
+            _, problems = process(name)
+            results[name] = problems
+            if problems and not args.keep_going:
+                break
+
+    failed = [n for n in names if results.get(n)]
+    ran = [n for n in names if n in results]
+
+    if len(names) > 1 or failed:
+        print()
+        for name in names:
+            if name not in results:
+                print("%-12s skipped (stopped after an earlier failure)" % name)
+            elif results[name]:
+                print("%-12s FAILED" % name)
+            else:
+                print("%-12s ok" % name)
+        print()
+
+    if failed:
+        for name in failed:
+            for problem in results[name]:
+                print("FAILED %s: %s" % (name, problem), file=sys.stderr)
+        return 1
+
+    if args.check:
+        if any(DEMOS[n]["results"] for n in names):
+            print("All demos match their reference data.")
+        else:
+            print("No demo in this selection has reference data to compare.")
+    elif args.update_ref:
+        rebaselined = [n for n in ran if DEMOS[n]["results"]]
+        if rebaselined:
+            print("Re-baselined ref/ for: %s" % " ".join(rebaselined))
+        else:
+            print("Nothing to re-baseline, this selection has no reference data.")
+    elif args.clean:
+        print("Removed generated demo output.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

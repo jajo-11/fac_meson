@@ -61,6 +61,9 @@ demo/*/*.txt
 demo/*/*.sp
 demo/*/*.rt
 demo/*/*.ham
+demo/*/*.r[0-9]
+demo/*/O_crm/
+demo/FeL/data/
 
 # latex binaries in docs
 *.bbl
